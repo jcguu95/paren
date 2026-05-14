@@ -30,38 +30,45 @@
 ;;; ── 2. 型別系統 ────────────────────────────────────────────────────────────
 ;;;
 ;;; 型別用 keyword 表示，複合型別用 list。
-;;; fmt-string<-type 回傳含 ~a 的 format string，
-;;; resolve-declaration 把變數名填入。
+;;; 在 declare、defun 參數等需要型別的地方直接寫：
+;;;
+;;;   :int                      →  int
+;;;   (:pointer :int)           →  int *
+;;;   (:pointer :int 3)         →  int ***（三層指標）
+;;;   (:array 10 :int)          →  int [10]
+;;;   (:array () :int)          →  int []（不定長）
+;;;   (:struct :point)          →  struct point
+;;;   (:function :int (:int :char))  →  回傳 int、接受 (int, char) 的函數型別
 
 (test spec/types
-  ;; 基本型別
-  (is (equal (paren::fmt-string<-type :int)    "int ~a"))
-  (is (equal (paren::fmt-string<-type :char)   "char ~a"))
-  (is (equal (paren::fmt-string<-type :float)  "float ~a"))
-  (is (equal (paren::fmt-string<-type :double) "double ~a"))
-  (is (equal (paren::fmt-string<-type :void)   "void ~a"))
+  ;; 基本型別：(declare () (變數名 型別) 初始值)
+  (is (equal (c '(declare () (x :int)    0))  "int x = 0;"))
+  (is (equal (c '(declare () (c :char)   0))  "char c = 0;"))
+  (is (equal (c '(declare () (f :float)  0))  "float f = 0;"))
+  (is (equal (c '(declare () (d :double) 0))  "double d = 0;"))
 
-  ;; 指標（預設一層）
-  (is (equal (paren::fmt-string<-type '(:pointer :int))   "int *(~a)"))
-  ;; 多層指標
-  (is (equal (paren::fmt-string<-type '(:pointer :int 2)) "int **(~a)"))
-  (is (equal (paren::fmt-string<-type '(:pointer :int 3)) "int ***(~a)"))
+  ;; 指標
+  (is (equal (c '(declare () (p  (:pointer :int))   ()))  "int *(p);"))
+  (is (equal (c '(declare () (pp (:pointer :int 2)) ()))  "int **(pp);"))
+  (is (equal (c '(declare () (ppp (:pointer :int 3)) ())) "int ***(ppp);"))
 
   ;; 陣列
-  (is (equal (paren::fmt-string<-type '(:array 10 :int))  "int (~a)[10]"))
-  (is (equal (paren::fmt-string<-type '(:array () :int))  "int (~a)[]"))
+  (is (equal (c '(declare () (a  (:array 10 :int)) ())) "int (a)[10];"))
+  (is (equal (c '(declare () (a  (:array () :int)) ())) "int (a)[];"))
 
-  ;; struct（名稱必須用 keyword）
-  (is (equal (paren::fmt-string<-type '(:struct :foo))     "struct foo ~a"))
+  ;; struct
+  (is (equal (c '(declare () (pt (:struct :point)) ())) "struct point pt;"))
 
-  ;; 函數型別（注意：不是函數指標，是函數類型本身）
-  (is (equal (paren::fmt-string<-type '(:function :int (:int :char)))
-             "int (~a) (int,char)"))
+  ;; 函數指標：(:pointer (:function 回傳型別 (參數型別...)))
+  (is (equal (c '(declare () (fn (:pointer (:function :int (:int :char)))) ()))
+             "int (*(fn)) (int,char);"))
 
-  ;; resolve-declaration：把型別 + 變數名組合成 C 宣告
-  (is (equal (paren::resolve-declaration '(x :int))           "int x"))
-  (is (equal (paren::resolve-declaration '(p (:pointer :int))) "int *(p)"))
-  (is (equal (paren::resolve-declaration '(a (:array 5 :int))) "int (a)[5]")))
+  ;; defun 參數中的型別用法（函數簽名即文件）
+  (is (equal (c '(defun (scale (:pointer :int)) ((p (:pointer :int)) (n :int))
+                    (return p)))
+             "int *(scale) (int *(p), int n) {
+  return (p);
+}")))
 
 ;;; ── 3. 字面值 ──────────────────────────────────────────────────────────────
 
