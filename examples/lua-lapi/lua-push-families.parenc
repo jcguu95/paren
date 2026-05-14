@@ -1,0 +1,105 @@
+;; lua-push-families.parenc
+;;
+;; Showcase: 用 PAREN/C 生成 Lua lapi.c 的重複函數族群
+;;
+;; Lua 5.4 的 lapi.c 有三個典型的重複族群：
+;;   lua_push*  (C 值 → Lua stack)   ← 此檔 3 個函數
+;;   lua_to*    (Lua stack → C 值)   ← 此檔 2 個函數
+;;   lua_is*    (型別謂詞)           ← 此檔 6 個函數
+;;
+;; 純 C 版本：11 個函數逐字手寫，改一個細節要改 11 處。
+;; PAREN/C 版本：11 行描述，邏輯集中在三個 schema 函數裡。
+;;
+;; PAREN/C invert-case 規則（此檔重要前提）：
+;;   全小寫 C 名稱  → 用 :identifier   (SBCL 讀為大寫，invert 回小寫)
+;;   混合大小寫     → 用 :|identifier|  (pipe 保留原始大小寫)
+;;   全大寫 C macro → 用 (raw "IDENT") (直接輸出，不經 invert-case)
+
+;; --- Lua internal headers ---
+(include :system ("stdarg.h" "stddef.h" "string.h"))
+(include :local  ("lprefix.h"
+                  "lua.h" "lapi.h" "ldebug.h" "ldo.h"
+                  "lgc.h" "lobject.h" "lstate.h"
+                  "lstring.h" "ltable.h" "ltm.h" "lvm.h"))
+
+;; ── 族群 1：lua_push* ────────────────────────────────────────────────────────
+;;
+;; 共同骨架 (lua_pushnumber 為例)：
+;;   lua_lock(L);
+;;   setfltvalue(s2v(L->top.p), n);
+;;   api_incr_top(L);
+;;   lua_unlock(L);
+;;
+;; 差異：C 型別 + setter macro。
+
+(LISP
+  (defun def-push (fn-name c-type arg setter)
+    `(defun (,fn-name :void)
+         ((l (:pointer :|lua_State|)) (,arg ,c-type))
+       (@lua_lock l)
+       (,setter (@s2v (dot (-> l top) p)) ,arg)
+       (@api_incr_top l)
+       (@lua_unlock l)))
+
+  ;; 三行描述，三個完整函數
+  `(progn
+     ,(def-push :lua_pushnumber
+                :|lua_Number| 'n '@setfltvalue)
+     ,(def-push :lua_pushinteger
+                :|lua_Integer| 'n '@setivalue)
+     ,(def-push :lua_pushlightuserdata
+                '(:pointer :void) 'p '@setpvalue)))
+
+;; ── 族群 2：lua_to* (數值) ───────────────────────────────────────────────────
+;;
+;; 共同骨架 (lua_tonumberx 為例)：
+;;   lua_Number n = 0;
+;;   const TValue *o = index2value(L, idx);
+;;   int isnum = tonumber(o, &n);
+;;   if (pisnum) *pisnum = isnum;
+;;   return isnum ? n : 0;
+;;
+;; 差異：回傳型別 + 轉換 macro。
+
+(LISP
+  (defun def-to-numeric (fn-name ret-type conv)
+    `(defun (,fn-name ,ret-type)
+         ((l (:pointer :|lua_State|)) (idx :int) (pisnum (:pointer :int)))
+       (declare () (n ,ret-type) 0)
+       (declare () (o (:pointer :|TValue|)) (@index2value l idx))
+       (declare () (isnum :int) (,conv o (& n)))
+       (cond ((!= pisnum 0) (set (deref pisnum) isnum)))
+       (cond (isnum (return n)))
+       (return 0)))
+
+  ;; 兩行描述，兩個完整函數
+  `(progn
+     ,(def-to-numeric :lua_tonumberx  :|lua_Number|  '@tonumber)
+     ,(def-to-numeric :lua_tointegerx :|lua_Integer| '@tointeger)))
+
+;; ── 族群 3：lua_is* 型別謂詞 ─────────────────────────────────────────────────
+;;
+;; 每個謂詞：lua_type(L, n) == LUA_T<FOO>
+;; tag-str 用 (raw ...) 輸出原始全大寫 C macro 名稱。
+
+(LISP
+  (defun def-type-pred (fn-name tag-str)
+    `(defun (,fn-name :int)
+         ((l (:pointer :|lua_State|)) (idx :int))
+       (return (== (@lua_type l idx) (raw ,tag-str)))))
+
+  ;; lua.h 把這些定義為 macro，先 #undef 再定義成型別安全的函數
+  ;; 好處：可被 debugger 追蹤、編譯器警告更準確
+  `(progn
+     (undefmacro :lua_isfunction)
+     (undefmacro :lua_istable)
+     (undefmacro :lua_islightuserdata)
+     (undefmacro :lua_isnil)
+     (undefmacro :lua_isboolean)
+     (undefmacro :lua_isthread)
+     ,(def-type-pred :lua_isfunction      "LUA_TFUNCTION")
+     ,(def-type-pred :lua_istable         "LUA_TTABLE")
+     ,(def-type-pred :lua_islightuserdata "LUA_TLIGHTUSERDATA")
+     ,(def-type-pred :lua_isnil           "LUA_TNIL")
+     ,(def-type-pred :lua_isboolean       "LUA_TBOOLEAN")
+     ,(def-type-pred :lua_isthread        "LUA_TTHREAD")))
