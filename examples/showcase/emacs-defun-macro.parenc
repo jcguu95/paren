@@ -41,8 +41,14 @@
         '((return x)))))
 
 (defun (main :int) ()
+  ;; Verify metadata is correctly stored in each subr struct.
   (declare () (p (:pointer (:struct :subr))) (& scar))
-  (@printf (str "scar.doc = %s\\n") (-> p doc))
+  (@printf (str "scar: min=%d max=%d doc=%s\\n")
+           (-> p min_args) (-> p max_args) (-> p doc))
   (set p (& scdr))
-  (@printf (str "scdr.doc = %s\\n") (-> p doc))
+  (@printf (str "scdr: min=%d max=%d doc=%s\\n")
+           (-> p min_args) (-> p max_args) (-> p doc))
+  ;; Verify the functions themselves work
+  (@printf (str "fcar(7)=%d\\n") (@fcar 7))
+  (@printf (str "fcdr(9)=%d\\n") (@fcdr 9))
   (return 0))

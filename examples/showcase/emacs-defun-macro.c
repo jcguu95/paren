@@ -20,9 +20,11 @@ int fcdr (int x) {
 
 int main () {
   struct subr *(p) = &scar;
-  printf("scar.doc = %s\n", p->doc);
+  printf("scar: min=%d max=%d doc=%s\n", p->min_args, p->max_args, p->doc);
   p = &scdr;
-  printf("scdr.doc = %s\n", p->doc);
+  printf("scdr: min=%d max=%d doc=%s\n", p->min_args, p->max_args, p->doc);
+  printf("fcar(7)=%d\n", fcar(7));
+  printf("fcdr(9)=%d\n", fcdr(9));
   return (0);
 }
 

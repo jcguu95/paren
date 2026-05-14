@@ -23,11 +23,20 @@ void entity_deserialize (struct entity *(dst), char *(buf)) {
 }
 
 int main () {
-  struct entity *(e) = malloc(sizeof(struct entity));
-  e->id = 42;
-  e->x = 1.5;
-  e->y = 2.5;
-  printf("entity: id=%d x=%.1f y=%.1f\n", e->id, e->x, e->y);
+  struct entity *(src) = malloc(sizeof(struct entity));
+  struct entity *(dst) = malloc(sizeof(struct entity));
+  char *(buf) = malloc(12);
+  src->id = 42;
+  src->x = 1.5;
+  src->y = 2.5;
+  entity_serialize(src, buf);
+  entity_deserialize(dst, buf);
+  printf("id:  src=%d dst=%d match=%d\n", src->id, dst->id, ((src->id) == (dst->id)));
+  printf("x:   src=%.1f dst=%.1f match=%d\n", src->x, dst->x, ((src->x) == (dst->x)));
+  printf("y:   src=%.1f dst=%.1f match=%d\n", src->y, dst->y, ((src->y) == (dst->y)));
+  free(src);
+  free(dst);
+  free(buf);
   return (0);
 }
 

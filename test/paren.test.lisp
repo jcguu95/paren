@@ -1510,28 +1510,73 @@ x1->next->next->value = 30
    (QUOTE ((A) B C))) "
                       :expected-stdout "A~%"))
 
-  ;; Showcase: safe-minmax
+  ;; Showcase: safe-minmax — all 6 generated functions + clamp variants
   (is (test-c-program "examples/showcase/safe-minmax.c"
-                      :expected-stdout "int_max(3,5)=5~%float_min(1.0,2.0)=1~%int_clamp(10,0,5)=5~%"))
+                      :expected-stdout "~:
+int_max(3,5)=5
+int_max(5,3)=5
+int_min(3,5)=3
+int_clamp(10,0,5)=5
+int_clamp(-1,0,5)=0
+int_clamp(3,0,5)=3
+float_max(1.5,2.5)=2.5
+float_min(1.5,2.5)=1.5
+float_clamp(5.0,0.0,3.0)=3.0
+double_max(1.0,2.0)=2.0
+double_min(1.0,2.0)=1.0
+"))
 
-  ;; Showcase: generic-list
+  ;; Showcase: generic-list — int and float lists, walk each node
   (is (test-c-program "examples/showcase/generic-list.c"
-                      :expected-stdout "list: 3 2 1~%"))
+                      :expected-stdout "~:
+int: 30
+int: 20
+int: 10
+float: 2.5
+float: 1.5
+"))
 
-  ;; Showcase: auto-serialize
+  ;; Showcase: auto-serialize — roundtrip: serialize then deserialize, all fields match
   (is (test-c-program "examples/showcase/auto-serialize.c"
-                      :expected-stdout "entity: id=42 x=1.5 y=2.5~%"))
+                      :expected-stdout "~:
+id:  src=42 dst=42 match=1
+x:   src=1.5 dst=1.5 match=1
+y:   src=2.5 dst=2.5 match=1
+"))
 
-  ;; Showcase: x-macro-replacement
+  ;; Showcase: x-macro-replacement — all 5 error codes + enum values
   (is (test-c-program "examples/showcase/x-macro-replacement.c"
-                      :expected-stdout "0: success~%1: timeout~%2: no connection~%3: access denied~%4: data corrupt~%"))
+                      :expected-stdout "~:
+0: success
+1: timeout
+2: no connection
+3: access denied
+4: data corrupt
+err_ok=0
+err_corrupt=4
+"))
 
-  ;; Showcase: emacs-defun-macro
+  ;; Showcase: emacs-defun-macro — struct metadata + function behavior
   (is (test-c-program "examples/showcase/emacs-defun-macro.c"
-                      :expected-stdout "scar.doc = Return the car.~%scdr.doc = Return the cdr.~%"))
+                      :expected-stdout "~:
+scar: min=1 max=1 doc=Return the car.
+scdr: min=1 max=1 doc=Return the cdr.
+fcar(7)=7
+fcdr(9)=9
+"))
 
-  ;; Showcase: state-machine-elevator (IDLE + event 0 -> state 1)
+  ;; Showcase: state-machine-elevator — full cycle through all states
   (is (test-c-program "examples/showcase/state-machine-elevator.c"
-                      :expected-stdout "state=0~%"))
+                      :expected-stdout "~:
+start=idle(6)
+btn_up->moving_up(0)
+arrived->door_opening(4)
+fully_open->door_open(2)
+timeout->door_closing(3)
+fully_closed->idle(6)
+btn_down->moving_down(1)
+emergency->emergency(5)
+reset->idle(6)
+"))
 
   )

@@ -73,8 +73,23 @@ int elevator_next (int state, int event) {
 
 int main () {
   int state = idle;
+  printf("start=idle(%d)\n", state);
   state = elevator_next(state, evt_btn_up);
-  printf("state=%d\n", state);
+  printf("btn_up->moving_up(%d)\n", state);
+  state = elevator_next(state, evt_arrived);
+  printf("arrived->door_opening(%d)\n", state);
+  state = elevator_next(state, evt_fully_open);
+  printf("fully_open->door_open(%d)\n", state);
+  state = elevator_next(state, evt_timeout);
+  printf("timeout->door_closing(%d)\n", state);
+  state = elevator_next(state, evt_fully_closed);
+  printf("fully_closed->idle(%d)\n", state);
+  state = elevator_next(state, evt_btn_down);
+  printf("btn_down->moving_down(%d)\n", state);
+  state = elevator_next(state, evt_emergency);
+  printf("emergency->emergency(%d)\n", state);
+  state = elevator_next(state, evt_reset);
+  printf("reset->idle(%d)\n", state);
   return (0);
 }
 

@@ -64,11 +64,24 @@ void double_free (struct double_node *(head)) {
 
 int main () {
   struct int_node *(head) = 0;
-  head = int_push(head, 1);
-  head = int_push(head, 2);
-  head = int_push(head, 3);
-  printf("list: %d %d %d\n", head->value, head->next->value, head->next->next->value);
+  head = int_push(head, 10);
+  head = int_push(head, 20);
+  head = int_push(head, 30);
+  struct int_node *(p) = head;
+  while (p) {
+    printf("int: %d\n", p->value);
+    p = p->next;
+  }
   int_free(head);
+  struct float_node *(fhead) = 0;
+  fhead = float_push(fhead, 1.5);
+  fhead = float_push(fhead, 2.5);
+  struct float_node *(fp) = fhead;
+  while (fp) {
+    printf("float: %.1f\n", fp->value);
+    fp = fp->next;
+  }
+  float_free(fhead);
   return (0);
 }
 

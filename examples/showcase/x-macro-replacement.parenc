@@ -31,7 +31,11 @@
       (err_corrupt "data corrupt"))))
 
 (defun (main :int) ()
+  ;; Print all error codes and messages.
   (declare () (i :int) 0)
   (for ((set i 0) (< i 5) (++ i))
        (@printf (str "%d: %s\\n") i (@ error_messages i)))
+  ;; Verify enum values are what we expect (err_ok=0, err_corrupt=4).
+  (@printf (str "err_ok=%d\\n")      err_ok)
+  (@printf (str "err_corrupt=%d\\n") err_corrupt)
   (return 0))

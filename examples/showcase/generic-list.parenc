@@ -38,13 +38,23 @@
      ,(def-linked-list :double)))
 
 (defun (main :int) ()
+  ;; int list: push 1 2 3, walk and print each node
   (declare () (head (:pointer (:struct :int_node))) 0)
-  (set head (@int_push head 1))
-  (set head (@int_push head 2))
-  (set head (@int_push head 3))
-  (@printf (str "list: %d %d %d\\n")
-           (-> head value)
-           (-> (-> head next) value)
-           (-> (-> (-> head next) next) value))
+  (set head (@int_push head 10))
+  (set head (@int_push head 20))
+  (set head (@int_push head 30))
+  (declare () (p (:pointer (:struct :int_node))) head)
+  (while p
+    (@printf (str "int: %d\\n") (-> p value))
+    (set p (-> p next)))
   (@int_free head)
+  ;; float list: push 1.5 2.5, walk and print
+  (declare () (fhead (:pointer (:struct :float_node))) 0)
+  (set fhead (@float_push fhead 1.5))
+  (set fhead (@float_push fhead 2.5))
+  (declare () (fp (:pointer (:struct :float_node))) fhead)
+  (while fp
+    (@printf (str "float: %.1f\\n") (-> fp value))
+    (set fp (-> fp next)))
+  (@float_free fhead)
   (return 0))

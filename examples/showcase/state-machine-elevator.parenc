@@ -57,7 +57,27 @@
       (EMERGENCY     EVT_MAINTENANCE   IDLE))))
 
 (defun (main :int) ()
+  ;; Walk a complete elevator cycle and print each state name.
+  ;; idle -btn_up-> moving_up -arrived-> door_opening
+  ;;   -fully_open-> door_open -timeout-> door_closing
+  ;;   -fully_closed-> idle -btn_down-> moving_down
+  ;;   -emergency-> emergency -reset-> idle
   (declare () (state :int) idle)
+  (@printf (str "start=idle(%d)\\n") state)
   (set state (@elevator_next state evt_btn_up))
-  (@printf (str "state=%d\\n") state)
+  (@printf (str "btn_up->moving_up(%d)\\n") state)
+  (set state (@elevator_next state evt_arrived))
+  (@printf (str "arrived->door_opening(%d)\\n") state)
+  (set state (@elevator_next state evt_fully_open))
+  (@printf (str "fully_open->door_open(%d)\\n") state)
+  (set state (@elevator_next state evt_timeout))
+  (@printf (str "timeout->door_closing(%d)\\n") state)
+  (set state (@elevator_next state evt_fully_closed))
+  (@printf (str "fully_closed->idle(%d)\\n") state)
+  (set state (@elevator_next state evt_btn_down))
+  (@printf (str "btn_down->moving_down(%d)\\n") state)
+  (set state (@elevator_next state evt_emergency))
+  (@printf (str "emergency->emergency(%d)\\n") state)
+  (set state (@elevator_next state evt_reset))
+  (@printf (str "reset->idle(%d)\\n") state)
   (return 0))

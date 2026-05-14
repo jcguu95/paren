@@ -38,8 +38,16 @@ double double_clamp (double val, double lo, double hi) {
 
 int main () {
   printf("int_max(3,5)=%d\n", int_max(3, 5));
-  printf("float_min(1.0,2.0)=%g\n", float_min(1.0, 2.0));
+  printf("int_max(5,3)=%d\n", int_max(5, 3));
+  printf("int_min(3,5)=%d\n", int_min(3, 5));
   printf("int_clamp(10,0,5)=%d\n", int_clamp(10, 0, 5));
+  printf("int_clamp(-1,0,5)=%d\n", int_clamp(-1, 0, 5));
+  printf("int_clamp(3,0,5)=%d\n", int_clamp(3, 0, 5));
+  printf("float_max(1.5,2.5)=%.1f\n", float_max(1.5, 2.5));
+  printf("float_min(1.5,2.5)=%.1f\n", float_min(1.5, 2.5));
+  printf("float_clamp(5.0,0.0,3.0)=%.1f\n", float_clamp(5.0, 0.0, 3.0));
+  printf("double_max(1.0,2.0)=%.1f\n", double_max(1.0, 2.0));
+  printf("double_min(1.0,2.0)=%.1f\n", double_min(1.0, 2.0));
   return (0);
 }
 
