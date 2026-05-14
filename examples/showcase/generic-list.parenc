@@ -1,0 +1,50 @@
+;; generic-list.parenc
+;;
+;; Showcase: 泛型 linked list
+;; 在純 C 裡你必須為每個型別複製貼上整份程式碼。
+;; 這裡只寫一次邏輯，三行呼叫生成三套完整的 struct + functions。
+
+(include :system ("stdlib.h"))
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-linked-list (type)
+    (let* ((s      (symbol-name type))
+           ;; node keyword: e.g. :INT_NODE
+           (node-kw (intern (format nil "~a_NODE" s) :keyword))
+           (push-kw (intern (format nil "~a_PUSH" s) :keyword))
+           (free-kw (intern (format nil "~a_FREE" s) :keyword)))
+      `(progn
+         (defstruct ,node-kw
+           ((value ,type)
+            (next  (:pointer (:struct ,node-kw)))))
+
+         (defun (,push-kw (:pointer (:struct ,node-kw)))
+             ((head (:pointer (:struct ,node-kw))) (value ,type))
+           (declare () (n (:pointer (:struct ,node-kw))) (@malloc (sizeof (:struct ,node-kw))))
+           (set (-> n value) value)
+           (set (-> n next)  head)
+           (return n))
+
+         (defun (,free-kw :void) ((head (:pointer (:struct ,node-kw))))
+           (while head
+             (declare () (tmp (:pointer (:struct ,node-kw))) (-> head next))
+             (@free head)
+             (set head tmp))))))
+
+  `(progn
+     ,(def-linked-list :int)
+     ,(def-linked-list :float)
+     ,(def-linked-list :double)))
+
+(defun (main :int) ()
+  (declare () (head (:pointer (:struct :int_node))) 0)
+  (set head (@int_push head 1))
+  (set head (@int_push head 2))
+  (set head (@int_push head 3))
+  (@printf (str "list: %d %d %d\\n")
+           (-> head value)
+           (-> (-> head next) value)
+           (-> (-> (-> head next) next) value))
+  (@int_free head)
+  (return 0))

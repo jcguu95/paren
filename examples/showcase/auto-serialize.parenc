@@ -1,0 +1,62 @@
+;; auto-serialize.parenc
+;;
+;; Showcase: 從 struct 定義自動生成序列化/反序列化函數
+;;
+;; 純 C 的痛苦：struct 定義和 serializer 是兩份獨立的程式碼。
+;; 加一個欄位要記得兩邊都改，忘了就是難查的 bug。
+;;
+;; 這裡：struct 和 serializer 來自同一份描述，永遠同步。
+
+(include :system ("stdlib.h"))
+(include :system ("string.h"))
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-serializable-struct (name fields)
+    (let* ((s        (symbol-name name))
+           (ser-fn   (intern (format nil "~a_SERIALIZE"   s)))
+           (deser-fn (intern (format nil "~a_DESERIALIZE" s)))
+           ;; calculate byte offsets for each field
+           (offset 0)
+           (annotated
+             (mapcar (lambda (f)
+                       (let ((off offset))
+                         (incf offset (third f))
+                         (list (first f) (second f) (third f) off)))
+                     fields)))
+      `(progn
+         (defstruct ,name
+           (,@(mapcar (lambda (f) `(,(first f) ,(second f))) annotated)))
+
+         (defun (,ser-fn :void)
+             ((src (:pointer (:struct ,name)))
+              (buf (:pointer :char)))
+           ,@(mapcar (lambda (f)
+                       `(@memcpy (+ buf ,(fourth f))
+                                 (& (-> src ,(first f)))
+                                 ,(third f)))
+                     annotated))
+
+         (defun (,deser-fn :void)
+             ((dst (:pointer (:struct ,name)))
+              (buf (:pointer :char)))
+           ,@(mapcar (lambda (f)
+                       `(@memcpy (& (-> dst ,(first f)))
+                                 (+ buf ,(fourth f))
+                                 ,(third f)))
+                     annotated)))))
+
+  ;; 唯一的真相來源：欄位、型別、大小全在這裡
+  (def-serializable-struct :entity
+    '((id    :int   4)
+      (x     :float 4)
+      (y     :float 4))))
+
+(defun (main :int) ()
+  (declare () (e (:pointer (:struct :entity))) (@malloc (sizeof (:struct :entity))))
+  (set (-> e id) 42)
+  (set (-> e x) 1.5)
+  (set (-> e y) 2.5)
+  (@printf (str "entity: id=%d x=%.1f y=%.1f\\n")
+           (-> e id) (-> e x) (-> e y))
+  (return 0))

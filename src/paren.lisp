@@ -60,7 +60,7 @@
   "Define a C operator."
   (assert (= 1 (length vars)))
   `(progn
-     ,(when (eq :expression (car body))
-        (set-expression name))
+     ,@(when (eq :expression (car body))
+         (list `(set-expression ',name)))
      (setf (gethash (op-name ',name) *functions*)
            (lambda (,(car vars)) ,@body))))

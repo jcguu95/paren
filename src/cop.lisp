@@ -49,7 +49,7 @@
             (indent (c `(compile-each "" ,@body))))))
 
 (def-cop enum (form)
-  (format nil "enum { ~{~a~^, ~} }"
+  (format nil "enum { ~{~a~^, ~} };"
           (mapcar (lambda (x) (if (symbolp x) (resolve-symbol x) x))
                   (nth 1 form))))
 
@@ -332,3 +332,12 @@ union ~a {~%~{  ~a;~%~}};"
 
 (def-cop block (form)
   (format nil "{~%~a~%}" (indent (c `(compile-each "" ,@form)))))
+
+(def-cop progn (form)
+  "Compile multiple top-level forms separated by blank lines."
+  (format nil "~{~a~^~%~%~}" (mapcar #'c form)))
+
+(def-cop sizeof (form)
+  "Generate sizeof(type) for a PAREN/C type."
+  (assert (= 1 (length form)))
+  (format nil "sizeof(~a)" (fmt-string<-type (car form) t)))

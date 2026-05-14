@@ -1,0 +1,63 @@
+;; state-machine-elevator.parenc
+;;
+;; Showcase: 電梯狀態機，7 states, 15 transitions
+;;
+;; 在純 C 裡你要寫 70 行 switch/case，而且邏輯藏在 case 裡面。
+;; 這裡的轉移表就是文件本身。加一個 transition = 加一行。
+
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-state-machine (transitions)
+    (let* ((states  (remove-duplicates
+                      (mapcan (lambda (tr) (list (nth 0 tr) (nth 2 tr)))
+                              transitions)
+                      :test #'eq))
+           (events  (remove-duplicates
+                      (mapcar #'second transitions)
+                      :test #'eq))
+           ;; Group transitions by source state
+           (groups  (mapcar (lambda (state)
+                              (cons state
+                                    (loop :for tr :in transitions
+                                          :when (eq (nth 0 tr) state)
+                                          :collect (list (nth 1 tr) (nth 2 tr)))))
+                            states)))
+      `(progn
+         (enum () (,@states))
+         (enum () (,@events))
+
+         (defun (elevator_next :int) ((state :int) (event :int))
+           (case state
+             ,@(mapcar (lambda (group)
+                         `(,(car group)
+                           ,@(mapcar (lambda (edge)
+                                       `(cond ((== event ,(first edge))
+                                               (return ,(second edge)))))
+                                     (cdr group))))
+                       groups)
+             (t (return state)))))))
+
+  (def-state-machine
+    ;;        現在狀態        事件               下一狀態
+    '((IDLE          EVT_BTN_UP        MOVING_UP)
+      (IDLE          EVT_BTN_DOWN      MOVING_DOWN)
+      (IDLE          EVT_BTN_OPEN      DOOR_OPENING)
+      (MOVING_UP     EVT_ARRIVED       DOOR_OPENING)
+      (MOVING_UP     EVT_EMERGENCY     EMERGENCY)
+      (MOVING_DOWN   EVT_ARRIVED       DOOR_OPENING)
+      (MOVING_DOWN   EVT_EMERGENCY     EMERGENCY)
+      (DOOR_OPENING  EVT_FULLY_OPEN    DOOR_OPEN)
+      (DOOR_OPEN     EVT_TIMEOUT       DOOR_CLOSING)
+      (DOOR_OPEN     EVT_BTN_CLOSE     DOOR_CLOSING)
+      (DOOR_OPEN     EVT_EMERGENCY     EMERGENCY)
+      (DOOR_CLOSING  EVT_FULLY_CLOSED  IDLE)
+      (DOOR_CLOSING  EVT_OBSTACLE      DOOR_OPENING)
+      (EMERGENCY     EVT_RESET         IDLE)
+      (EMERGENCY     EVT_MAINTENANCE   IDLE))))
+
+(defun (main :int) ()
+  (declare () (state :int) idle)
+  (set state (@elevator_next state evt_btn_up))
+  (@printf (str "state=%d\\n") state)
+  (return 0))

@@ -1,0 +1,39 @@
+;; safe-minmax.parenc
+;;
+;; Showcase: 安全的 MAX / MIN，消滅 double evaluation bug
+;;
+;; C 的經典陷阱：
+;;   #define MAX(a, b) ((a) > (b) ? (a) : (b))
+;;   MAX(x++, y++)  ← x++ 被展開兩次，未定義行為！
+;;
+;; GCC 有非標準的 typeof 擴展可以繞過，但不可攜。
+;; 這裡生成的是真正的 inline 函數：型別安全、無副作用、可攜。
+
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-safe-minmax (type)
+    (let* ((s        (symbol-name type))
+           (max-fn   (intern (format nil "~a_MAX" s)))
+           (min-fn   (intern (format nil "~a_MIN" s)))
+           (clamp-fn (intern (format nil "~a_CLAMP" s))))
+      `(progn
+         (defun (,max-fn ,type) ((a ,type) (b ,type))
+           (return (? (> a b) a b)))
+
+         (defun (,min-fn ,type) ((a ,type) (b ,type))
+           (return (? (< a b) a b)))
+
+         (defun (,clamp-fn ,type) ((val ,type) (lo ,type) (hi ,type))
+           (return (? (< val lo) lo (? (> val hi) hi val)))))))
+
+  `(progn
+     ,(def-safe-minmax :int)
+     ,(def-safe-minmax :float)
+     ,(def-safe-minmax :double)))
+
+(defun (main :int) ()
+  (@printf (str "int_max(3,5)=%d\\n")        (@int_max 3 5))
+  (@printf (str "float_min(1.0,2.0)=%g\\n")  (@float_min 1.0 2.0))
+  (@printf (str "int_clamp(10,0,5)=%d\\n")   (@int_clamp 10 0 5))
+  (return 0))

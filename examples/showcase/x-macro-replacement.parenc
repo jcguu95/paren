@@ -1,0 +1,37 @@
+;; x-macro-replacement.parenc
+;;
+;; Showcase: 取代 C 的 X-Macro 技巧
+;;
+;; X-Macro 是 C 社群流傳的「必要之惡」：
+;;   #define LIST X(A) X(B) X(C)
+;;   #define X(n) n,  LIST  #undef X   ← 用完要 undef
+;;   #define X(n) #n, LIST  #undef X   ← 再來一遍
+;; 讓第一次看到的人完全看不懂在幹什麼。
+;;
+;; 這裡：資料只寫一次，用普通的 Lisp 函數展開成任何形式。
+
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-error-table (entries)
+    (let ((codes (mapcar #'first  entries))
+          (msgs  (mapcar #'second entries)))
+      `(progn
+         (enum () (,@codes))
+
+         (declare :static
+                  (error_messages (:array ,(length entries) (:pointer :char)))
+                  (vec ,@(mapcar (lambda (m) (format nil "\"~a\"" m)) msgs))))))
+
+  (def-error-table
+    '((err_ok      "success")
+      (err_timeout "timeout")
+      (err_noconn  "no connection")
+      (err_denied  "access denied")
+      (err_corrupt "data corrupt"))))
+
+(defun (main :int) ()
+  (declare () (i :int) 0)
+  (for ((set i 0) (< i 5) (++ i))
+       (@printf (str "%d: %s\\n") i (@ error_messages i)))
+  (return 0))
