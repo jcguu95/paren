@@ -36,7 +36,8 @@
                                                (return ,(second edge)))))
                                      (cdr group))))
                        groups)
-             (t (return state)))))))
+             (t (return state)))
+           (return state)))))
 
   (def-state-machine
     ;;        現在狀態        事件               下一狀態
@@ -80,4 +81,10 @@
   (@printf (str "emergency->emergency(%d)\\n") state)
   (set state (@elevator_next state evt_reset))
   (@printf (str "reset->idle(%d)\\n") state)
+  ;; Invalid event: state should be unchanged (stays idle)
+  (declare () (before :int) state)
+  (set state (@elevator_next state evt_emergency))
+  ;; emergency from idle is not defined -> stays idle
+  (@printf (str "invalid->idle(%d)\\n") state)
+  (@printf (str "unchanged=%d\\n") (== state before))
   (return 0))

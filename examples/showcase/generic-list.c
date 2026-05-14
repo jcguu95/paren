@@ -82,6 +82,15 @@ int main () {
     fp = fp->next;
   }
   float_free(fhead);
+  struct double_node *(dhead) = 0;
+  dhead = double_push(dhead, 3.14);
+  dhead = double_push(dhead, 2.71);
+  struct double_node *(dp) = dhead;
+  while (dp) {
+    printf("double: %.2f\n", dp->value);
+    dp = dp->next;
+  }
+  double_free(dhead);
   return (0);
 }
 

@@ -1526,7 +1526,7 @@ double_max(1.0,2.0)=2.0
 double_min(1.0,2.0)=1.0
 "))
 
-  ;; Showcase: generic-list — int and float lists, walk each node
+  ;; Showcase: generic-list — int, float, double lists, walk each node
   (is (test-c-program "examples/showcase/generic-list.c"
                       :expected-stdout "~:
 int: 30
@@ -1534,14 +1534,20 @@ int: 20
 int: 10
 float: 2.5
 float: 1.5
+double: 2.71
+double: 3.14
 "))
 
-  ;; Showcase: auto-serialize — roundtrip: serialize then deserialize, all fields match
+  ;; Showcase: auto-serialize — roundtrip: positive, negative, zero, INT_MAX
   (is (test-c-program "examples/showcase/auto-serialize.c"
                       :expected-stdout "~:
 id:  src=42 dst=42 match=1
 x:   src=1.5 dst=1.5 match=1
 y:   src=2.5 dst=2.5 match=1
+neg_id:  src=-1 dst=-1 match=1
+zero_x:  src=0.0 dst=0.0 match=1
+neg_y:   src=-3.14 dst=-3.14 match=1
+max_id:  src=2147483647 dst=2147483647 match=1
 "))
 
   ;; Showcase: x-macro-replacement — all 5 error codes + enum values
@@ -1565,7 +1571,7 @@ fcar(7)=7
 fcdr(9)=9
 "))
 
-  ;; Showcase: state-machine-elevator — full cycle through all states
+  ;; Showcase: state-machine-elevator — full cycle + invalid event stays unchanged
   (is (test-c-program "examples/showcase/state-machine-elevator.c"
                       :expected-stdout "~:
 start=idle(6)
@@ -1577,6 +1583,8 @@ fully_closed->idle(6)
 btn_down->moving_down(1)
 emergency->emergency(5)
 reset->idle(6)
+invalid->idle(6)
+unchanged=1
 "))
 
   )

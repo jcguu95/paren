@@ -69,6 +69,7 @@ int elevator_next (int state, int event) {
       return (state);
       break;
   }
+  return (state);
 }
 
 int main () {
@@ -90,6 +91,10 @@ int main () {
   printf("emergency->emergency(%d)\n", state);
   state = elevator_next(state, evt_reset);
   printf("reset->idle(%d)\n", state);
+  int before = state;
+  state = elevator_next(state, evt_emergency);
+  printf("invalid->idle(%d)\n", state);
+  printf("unchanged=%d\n", ((state) == (before)));
   return (0);
 }
 

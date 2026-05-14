@@ -57,4 +57,13 @@
     (@printf (str "float: %.1f\\n") (-> fp value))
     (set fp (-> fp next)))
   (@float_free fhead)
+  ;; double list: push 3.14 2.71, walk and print
+  (declare () (dhead (:pointer (:struct :double_node))) 0)
+  (set dhead (@double_push dhead 3.14))
+  (set dhead (@double_push dhead 2.71))
+  (declare () (dp (:pointer (:struct :double_node))) dhead)
+  (while dp
+    (@printf (str "double: %.2f\\n") (-> dp value))
+    (set dp (-> dp next)))
+  (@double_free dhead)
   (return 0))
