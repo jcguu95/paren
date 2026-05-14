@@ -49,7 +49,7 @@
             (indent (c `(compile-each "" ,@body))))))
 
 (def-cop enum (form)
-  (format nil "enum { ~{~a~^, ~} }"
+  (format nil "enum { ~{~a~^, ~} };"
           (mapcar (lambda (x) (if (symbolp x) (resolve-symbol x) x))
                   (nth 1 form))))
 
@@ -62,6 +62,10 @@ union ~a {~%~{  ~a;~%~}};"
 (def-cop ->  (form) :expression
   ;; TODO Do we need to use (~a) instead of ~a in ->?
   (format nil "~{~a~^->~}"      (mapcar #'c form)))
+
+(def-cop dot (form) :expression
+  "Non-pointer struct member access: (dot obj field) => obj.field"
+  (format nil "~{~a~^.~}" (mapcar #'c form)))
 
 (def-cop ==  (form) :expression
   (format nil "((~a) == (~a))"  (c (nth 0 form)) (c (nth 1 form))))
@@ -234,6 +238,14 @@ union ~a {~%~{  ~a;~%~}};"
 (def-cop & (form)
   (format nil "&~a" (c (nth 0 form))))
 
+(def-cop raw (form) :expression
+  "Output a string verbatim into the generated C — for identifiers that
+   cannot be expressed through invert-case (e.g. ALL_CAPS C macros like
+   LUA_TFUNCTION that would be invert-cased to lua_tfunction)."
+  (assert (= 1 (length form)))
+  (assert (stringp (car form)))
+  (car form))
+
 ;; TODO Do we want extra parenthesis to protect it?
 ;; TODO Is deref an expression?
 (def-cop deref (form)
@@ -332,3 +344,12 @@ union ~a {~%~{  ~a;~%~}};"
 
 (def-cop block (form)
   (format nil "{~%~a~%}" (indent (c `(compile-each "" ,@form)))))
+
+(def-cop progn (form)
+  "Compile multiple top-level forms separated by blank lines."
+  (format nil "~{~a~^~%~%~}" (mapcar #'c form)))
+
+(def-cop sizeof (form)
+  "Generate sizeof(type) for a PAREN/C type."
+  (assert (= 1 (length form)))
+  (format nil "sizeof(~a)" (fmt-string<-type (car form) t)))

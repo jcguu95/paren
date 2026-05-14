@@ -9,7 +9,7 @@
   :license "MIT"
   :bug-tracker "https://github.com/jcguu95/lispc"
   :source-control (:git "https://github.com/jcguu95/lispc.git")
-  :depends-on (:log4cl)
+  :depends-on ()
   :perform
   (test-op
    (o system)
@@ -39,7 +39,9 @@
   ((:module "test"
     :serial t
     :components ((:file "packages")
-                 (:file "paren.test"))))
+                 (:file "paren.test")
+                 (:file "type-extreme")
+                 (:file "spec"))))
   :perform
   (load-op                              ; Test whenever load.
    (o system)

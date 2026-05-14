@@ -1,0 +1,96 @@
+;; auto-serialize.parenc
+;;
+;; Showcase: 從 struct 定義自動生成序列化/反序列化函數
+;;
+;; 純 C 的痛苦：struct 定義和 serializer 是兩份獨立的程式碼。
+;; 加一個欄位要記得兩邊都改，忘了就是難查的 bug。
+;;
+;; 這裡：struct 和 serializer 來自同一份描述，永遠同步。
+
+(include :system ("stdlib.h"))
+(include :system ("string.h"))
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-serializable-struct (name fields)
+    (let* ((s        (symbol-name name))
+           (ser-fn   (intern (format nil "~a_SERIALIZE"   s)))
+           (deser-fn (intern (format nil "~a_DESERIALIZE" s)))
+           ;; calculate byte offsets for each field
+           (offset 0)
+           (annotated
+             (mapcar (lambda (f)
+                       (let ((off offset))
+                         (incf offset (third f))
+                         (list (first f) (second f) (third f) off)))
+                     fields)))
+      `(progn
+         (defstruct ,name
+           (,@(mapcar (lambda (f) `(,(first f) ,(second f))) annotated)))
+
+         (defun (,ser-fn :void)
+             ((src (:pointer (:struct ,name)))
+              (buf (:pointer :char)))
+           ,@(mapcar (lambda (f)
+                       `(@memcpy (+ buf ,(fourth f))
+                                 (& (-> src ,(first f)))
+                                 ,(third f)))
+                     annotated))
+
+         (defun (,deser-fn :void)
+             ((dst (:pointer (:struct ,name)))
+              (buf (:pointer :char)))
+           ,@(mapcar (lambda (f)
+                       `(@memcpy (& (-> dst ,(first f)))
+                                 (+ buf ,(fourth f))
+                                 ,(third f)))
+                     annotated)))))
+
+  ;; 唯一的真相來源：欄位、型別、大小全在這裡
+  (def-serializable-struct :entity
+    '((id    :int   4)
+      (x     :float 4)
+      (y     :float 4))))
+
+(defun (main :int) ()
+  (declare () (src (:pointer (:struct :entity))) (@malloc (sizeof (:struct :entity))))
+  (declare () (dst (:pointer (:struct :entity))) (@malloc (sizeof (:struct :entity))))
+  (declare () (buf (:pointer :char)) (@malloc 12))
+
+  ;; Case 1: normal positive values
+  (set (-> src id) 42)
+  (set (-> src x)  1.5)
+  (set (-> src y)  2.5)
+  (@entity_serialize src buf)
+  (@entity_deserialize dst buf)
+  (@printf (str "id:  src=%d dst=%d match=%d\\n")
+           (-> src id) (-> dst id) (== (-> src id) (-> dst id)))
+  (@printf (str "x:   src=%.1f dst=%.1f match=%d\\n")
+           (-> src x) (-> dst x) (== (-> src x) (-> dst x)))
+  (@printf (str "y:   src=%.1f dst=%.1f match=%d\\n")
+           (-> src y) (-> dst y) (== (-> src y) (-> dst y)))
+
+  ;; Case 2: zero and negative values
+  (set (-> src id) -1)
+  (set (-> src x)  0.0)
+  (set (-> src y)  -3.14)
+  (@entity_serialize src buf)
+  (@entity_deserialize dst buf)
+  (@printf (str "neg_id:  src=%d dst=%d match=%d\\n")
+           (-> src id) (-> dst id) (== (-> src id) (-> dst id)))
+  (@printf (str "zero_x:  src=%.1f dst=%.1f match=%d\\n")
+           (-> src x) (-> dst x) (== (-> src x) (-> dst x)))
+  (@printf (str "neg_y:   src=%.2f dst=%.2f match=%d\\n")
+           (-> src y) (-> dst y) (== (-> src y) (-> dst y)))
+
+  ;; Case 3: large boundary integer
+  (set (-> src id) 2147483647)
+  (set (-> src x)  0.0)
+  (set (-> src y)  0.0)
+  (@entity_serialize src buf)
+  (@entity_deserialize dst buf)
+  (@printf (str "max_id:  src=%d dst=%d match=%d\\n")
+           (-> src id) (-> dst id) (== (-> src id) (-> dst id)))
+
+  (@free src) (@free dst) (@free buf)
+  (return 0))

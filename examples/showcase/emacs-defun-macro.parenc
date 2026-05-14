@@ -1,0 +1,54 @@
+;; emacs-defun-macro.parenc
+;;
+;; Showcase: 模仿 Emacs 底層的 DEFUN macro
+;;
+;; Emacs 的 C source 裡有一個著名的 DEFUN macro，用來定義 Lisp primitive：
+;;
+;;   DEFUN ("car", Fcar, Scar, 1, 1, 0,
+;;          doc: /* Return the car of LIST... */)
+;;     (Lisp_Object list)
+;;   { ... }
+;;
+;; 這個 macro 展開後同時生成：
+;;   1. 一個 C 函數 Fcar(...)
+;;   2. 一個靜態 Scar struct（存放 docstring、arity 等 metadata）
+;;
+;; 在純 C 裡這個 macro 展開極度複雜，而且完全不透明。
+;; 用 PAREN/C，我們可以用普通的 Lisp 函數做同樣的事，每一步都看得見。
+
+(include :system ("stdio.h"))
+
+(defstruct :subr
+  ((min_args :int)
+   (max_args :int)
+   (doc (:pointer :char))))
+
+(LISP
+  (defun def-prim (fn-name subr-name min-args max-args doc params body)
+    `(progn
+       (declare :static
+                (,subr-name (:struct :subr))
+                (vec ,min-args ,max-args ,(format nil "\"~a\"" doc)))
+       (defun (,fn-name :int) ,params
+         ,@body)))
+
+  `(progn
+     ,(def-prim :fcar :scar 1 1 "Return the car."
+        '((x :int))
+        '((return x)))
+     ,(def-prim :fcdr :scdr 1 1 "Return the cdr."
+        '((x :int))
+        '((return x)))))
+
+(defun (main :int) ()
+  ;; Verify metadata is correctly stored in each subr struct.
+  (declare () (p (:pointer (:struct :subr))) (& scar))
+  (@printf (str "scar: min=%d max=%d doc=%s\\n")
+           (-> p min_args) (-> p max_args) (-> p doc))
+  (set p (& scdr))
+  (@printf (str "scdr: min=%d max=%d doc=%s\\n")
+           (-> p min_args) (-> p max_args) (-> p doc))
+  ;; Verify the functions themselves work
+  (@printf (str "fcar(7)=%d\\n") (@fcar 7))
+  (@printf (str "fcdr(9)=%d\\n") (@fcdr 9))
+  (return 0))

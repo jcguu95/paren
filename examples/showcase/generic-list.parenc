@@ -1,0 +1,69 @@
+;; generic-list.parenc
+;;
+;; Showcase: 泛型 linked list
+;; 在純 C 裡你必須為每個型別複製貼上整份程式碼。
+;; 這裡只寫一次邏輯，三行呼叫生成三套完整的 struct + functions。
+
+(include :system ("stdlib.h"))
+(include :system ("stdio.h"))
+
+(LISP
+  (defun def-linked-list (type)
+    (let* ((s      (symbol-name type))
+           ;; node keyword: e.g. :INT_NODE
+           (node-kw (intern (format nil "~a_NODE" s) :keyword))
+           (push-kw (intern (format nil "~a_PUSH" s) :keyword))
+           (free-kw (intern (format nil "~a_FREE" s) :keyword)))
+      `(progn
+         (defstruct ,node-kw
+           ((value ,type)
+            (next  (:pointer (:struct ,node-kw)))))
+
+         (defun (,push-kw (:pointer (:struct ,node-kw)))
+             ((head (:pointer (:struct ,node-kw))) (value ,type))
+           (declare () (n (:pointer (:struct ,node-kw))) (@malloc (sizeof (:struct ,node-kw))))
+           (set (-> n value) value)
+           (set (-> n next)  head)
+           (return n))
+
+         (defun (,free-kw :void) ((head (:pointer (:struct ,node-kw))))
+           (while head
+             (declare () (tmp (:pointer (:struct ,node-kw))) (-> head next))
+             (@free head)
+             (set head tmp))))))
+
+  `(progn
+     ,(def-linked-list :int)
+     ,(def-linked-list :float)
+     ,(def-linked-list :double)))
+
+(defun (main :int) ()
+  ;; int list: push 1 2 3, walk and print each node
+  (declare () (head (:pointer (:struct :int_node))) 0)
+  (set head (@int_push head 10))
+  (set head (@int_push head 20))
+  (set head (@int_push head 30))
+  (declare () (p (:pointer (:struct :int_node))) head)
+  (while p
+    (@printf (str "int: %d\\n") (-> p value))
+    (set p (-> p next)))
+  (@int_free head)
+  ;; float list: push 1.5 2.5, walk and print
+  (declare () (fhead (:pointer (:struct :float_node))) 0)
+  (set fhead (@float_push fhead 1.5))
+  (set fhead (@float_push fhead 2.5))
+  (declare () (fp (:pointer (:struct :float_node))) fhead)
+  (while fp
+    (@printf (str "float: %.1f\\n") (-> fp value))
+    (set fp (-> fp next)))
+  (@float_free fhead)
+  ;; double list: push 3.14 2.71, walk and print
+  (declare () (dhead (:pointer (:struct :double_node))) 0)
+  (set dhead (@double_push dhead 3.14))
+  (set dhead (@double_push dhead 2.71))
+  (declare () (dp (:pointer (:struct :double_node))) dhead)
+  (while dp
+    (@printf (str "double: %.2f\\n") (-> dp value))
+    (set dp (-> dp next)))
+  (@double_free dhead)
+  (return 0))
